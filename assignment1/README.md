@@ -18,7 +18,7 @@ class User:
         self.gender = gender # str
         self.preferences = preferences # List[str] (e.g. ['M'])
         self.grad_year = grad_year # int (e.g. 2022, 2023, 2024, 2025)
-        self.responses = responses List[int] (e.g. [0, 1, 2, 3, 1])
+        self.responses = responses # List[int] (e.g. [0, 1, 2, 3, 1])
 ```
 Note that for  `responses`, each index represents a question and the value stored at that index refers to the answer choice for that question (so in our above case, that person picked `2` for question `2`).
 
