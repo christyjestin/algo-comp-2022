@@ -1,28 +1,64 @@
 import numpy as np
 from typing import List, Tuple
+from random import shuffle
+
+# dictionary of matching genders/gender preferences i.e. for each key, val pair, if A's gender is the key, 
+# then B would only be potentially attracted to A if B's gender preference is present in val
+gender_match_dict = {
+    'Female' : ['Women', 'Bisexual', 'Pansexual', 'Lesbian'],
+    'Male' : ['Men', 'Bisexual', 'Pansexual', 'Gay'],
+    'Nonbinary' : ['Pansexual'],
+}
+
+# helper function to generate dictionary of preferences i.e. how does each member of
+# group 1 rank each member of group2
+def generate_prefs(group1, group2):
+    group1_preferences = dict()
+    for g1_mem in group1:
+        # filter only the scores that correspond to the receivers
+        g1_mem_scores = np.array(raw_scores[g1_mem])[np.array(group2)]
+        
+        # set score to zero if gender does not align w/ g1_mem's preferences
+        for i, g2_mem in enumerate(group2):
+            if gender_preferences[g1_mem] not in gender_match_dict[genders[g2_mem]]:
+                g1_mem_scores[i] = 0
+
+        # sort the receivers based on prop's scores in descending order
+        group1_preferences[g1_mem] = np.array(group2)[np.argsort(g1_mem_scores)[::-1]].tolist()
+    return group1_preferences
 
 def run_matching(scores: List[List], gender_id: List, gender_pref: List) -> List[Tuple]:
-    """
-    TODO: Implement Gale-Shapley stable matching!
-    :param scores: raw N x N matrix of compatibility scores. Use this to derive a preference rankings.
-    :param gender_id: list of N gender identities (Male, Female, Non-binary) corresponding to each user
-    :param gender_pref: list of N gender preferences (Men, Women, Bisexual) corresponding to each user
-    :return: `matches`, a List of (Proposer, Acceptor) Tuples representing monogamous matches
+    matches = dict()
+    num_people = len(genders)
+    lst = [i for i in range(num_people)]
+    
+    # randomly split into 2 groups
+    shuffle(lst)
+    proposers = lst[:num_people // 2]
+    receivers = lst[num_people // 2:]
+    
+    prop_prefs = generate_prefs(proposers, receivers)
+    rec_prefs = generate_prefs(receivers, proposers)
+    
+    free_proposers = proposers
+    # continue until all proposers have been matched
+    while free_proposers:
+        prop = free_proposers[0]
+        for rec in prop_prefs[prop]:
+            # if receiver is unmatched
+            if rec not in matches.keys():
+                matches[rec] = prop
+                free_proposers.remove(prop)
+                break
 
-    Some Guiding Questions/Hints:
-        - This is not the standard Men proposing & Women receiving scheme Gale-Shapley is introduced as
-        - Instead, to account for various gender identity/preference combinations, it would be better to choose a random half of users to act as "Men" (proposers) and the other half as "Women" (receivers)
-            - From there, you can construct your two preferences lists (as seen in the canonical Gale-Shapley algorithm; one for each half of users
-        - Before doing so, it is worth addressing incompatible gender identity/preference combinations (e.g. gay men should not be matched with straight men).
-            - One easy way of doing this is setting the scores of such combinations to be 0
-            - Think carefully of all the various (Proposer-Preference:Receiver-Gender) combinations and whether they make sense as a match
-        - How will you keep track of the Proposers who get "freed" up from matches?
-        - We know that Receivers never become unmatched in the algorithm.
-            - What data structure can you use to take advantage of this fact when forming your matches?
-        - This is by no means an exhaustive list, feel free to reach out to us for more help!
-    """
-    matches = [()]
-    return matches
+            # if receiver is matched but new match is better
+            elif rec_prefs[rec].index(prop) < rec_prefs[rec].index(matches[rec]):
+                free_proposers.append(matches[rec])
+                matches[rec] = prop
+                free_proposers.remove(prop)
+                break
+    # matches stored in dict as receiver:proposer pairs
+    return [(v,k) for k,v in matches.items()]
 
 if __name__ == "__main__":
     raw_scores = np.loadtxt('raw_scores.txt').tolist()
@@ -39,3 +75,4 @@ if __name__ == "__main__":
             gender_preferences.append(curr)
 
     gs_matches = run_matching(raw_scores, genders, gender_preferences)
+
